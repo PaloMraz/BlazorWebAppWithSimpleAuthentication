@@ -1,0 +1,9 @@
+﻿@page "/secure-for-superuser"
+
+@attribute [Authorize(Roles = "Superuser")]
+
+<h3>Secure Page for Superuser</h3>
+
+@code {
+
+}
