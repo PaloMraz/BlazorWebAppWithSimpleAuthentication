@@ -1,8 +1,10 @@
 ﻿@page "/secure"
 
+@inherits AppComponentBase
+
 @attribute [Authorize]
 
-<h3>Secure Page</h3>
+<h3>Secure Page - @UserName</h3>
 
 @code {
 

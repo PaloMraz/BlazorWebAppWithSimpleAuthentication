@@ -1,8 +1,10 @@
 ﻿@page "/secure-for-superuser"
 
+@inherits AppComponentBase
+
 @attribute [Authorize(Roles = "Superuser")]
 
-<h3>Secure Page for Superuser</h3>
+<h3>Secure Page for Superuser - @UserName</h3>
 
 @code {
 

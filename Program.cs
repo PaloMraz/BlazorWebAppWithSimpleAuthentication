@@ -1,4 +1,6 @@
 using BlazorWebAppWithSimpleAuthentication.Components;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Http.Extensions;
 using System.Diagnostics;
 using System.Security.Claims;
@@ -12,22 +14,44 @@ public class Program
     var builder = WebApplication.CreateBuilder(args);
 
     // Add services to the container.
-    builder.Services.AddRazorComponents()
-        .AddInteractiveServerComponents();
+    IRazorComponentsBuilder razorComponentsBuilder = builder.Services.AddRazorComponents();
+    razorComponentsBuilder.AddInteractiveServerComponents();
+
+    // Set of claims that are initialized in the inline middleware below from request headers and
+    // used to create the user's identity through the CustomAuthenticationStateProvider
+    List<Claim> claimsFromRequestHeaders = new();
+
+    // Add the CustomAuthenticationStateProvider to the service collection with a delegate that closes
+    // over the claimsFromRequestHeaders initialized by the inline middleware below.
+    builder.Services.AddScoped<AuthenticationStateProvider>(implementationFactory: (serviceProvider) => 
+    {
+      return new CustomAuthenticationStateProvider(claimsFromRequestHeaders);
+    });
 
     var app = builder.Build();
-    app.Use((context, next) =>
+
+    // Inline middleware that initializes the claimsFromRequestHeaders collection from the first request.
+    app.Use(async (context, next) =>
     {
-      Debug.WriteLine($"======================> {context.Request.GetDisplayUrl()}");
-      Claim[] claims =
-      [
-        new Claim(ClaimTypes.Name, "John Doe"),
-        new Claim(ClaimTypes.Email, "john.doe@example.com"),
-        new Claim(ClaimTypes.Role, "Administrator")
-      ];
-      context.User = new ClaimsPrincipal(new ClaimsIdentity(claims, "CustomAuth"));
-      return next(context);
+      // Do not initialize more than once.
+      if (claimsFromRequestHeaders.Count > 0)
+      {
+        await next();
+        return;
+      }
+
+      // This would be initialized from request headers...
+      //if (context.Request.Headers.TryGetValue("X-Claim-UserId", out var userId))
+      {
+        claimsFromRequestHeaders.Add(new Claim(ClaimTypes.NameIdentifier, "123"));
+      }
+      //if (context.Request.Headers.TryGetValue("X-Claim-UserName", out var userName))
+      {
+        claimsFromRequestHeaders.Add(new Claim(ClaimTypes.Name, "John Doe"));
+      }
+      await next();
     });
+
 
     // Configure the HTTP request pipeline.
     if (!app.Environment.IsDevelopment())
@@ -46,5 +70,27 @@ public class Program
         .AddInteractiveServerRenderMode();
 
     app.Run();
+  }
+}
+
+
+/// <summary>
+/// Creates an <see cref="AuthenticationState"/> with claims provider in constructor.
+/// </summary>
+public class CustomAuthenticationStateProvider : AuthenticationStateProvider
+{
+  private readonly IReadOnlyCollection<Claim> _claims;
+
+  public CustomAuthenticationStateProvider(IReadOnlyCollection<Claim> claims)
+  {
+    this._claims = claims;
+  }
+
+
+  public override Task<AuthenticationState> GetAuthenticationStateAsync()
+  {
+    var identity = new ClaimsIdentity(this._claims, "Custom Authentication");
+    var user = new ClaimsPrincipal(identity);
+    return Task.FromResult(new AuthenticationState(user));
   }
 }
