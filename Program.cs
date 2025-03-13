@@ -41,13 +41,15 @@ public class Program
       }
 
       // This would be initialized from request headers...
-      //if (context.Request.Headers.TryGetValue("X-Claim-UserId", out var userId))
+      if (context.Request.Headers.TryGetValue("X-Claim-UserId", out var userId))
       {
-        claimsFromRequestHeaders.Add(new Claim(ClaimTypes.NameIdentifier, "123"));
+        Console.WriteLine($"X-Claim-UserId: {userId}");
+        claimsFromRequestHeaders.Add(new Claim(ClaimTypes.NameIdentifier, userId!));
       }
-      //if (context.Request.Headers.TryGetValue("X-Claim-UserName", out var userName))
+      if (context.Request.Headers.TryGetValue("X-Claim-UserName", out var userName))
       {
-        claimsFromRequestHeaders.Add(new Claim(ClaimTypes.Name, "John Doe"));
+        Console.WriteLine($"X-Claim-UserName: {userName}");
+        claimsFromRequestHeaders.Add(new Claim(ClaimTypes.Name, userName!));
       }
       await next();
     });
