@@ -14,21 +14,20 @@ public class AuthenticationTests
     for (int i = 0; i < 5; i++)
     {
       string userName = $"user-{i}";
-      invokeTasks.Add(InvokeAsync(browser, i, userName));
+      invokeTasks.Add(ExecuteUserNameCheckAsync(browser, userName));
     }
     await Task.WhenAll(invokeTasks);
   }
 
 
-  private static async Task InvokeAsync(IBrowser browser, int i, string userName)
+  private static async Task ExecuteUserNameCheckAsync(IBrowser browser, string userName)
   {
     await using IBrowserContext context = await browser.NewContextAsync(new BrowserNewContextOptions()
     {
       ExtraHTTPHeaders = new Dictionary<string, string>()
-        {
-          { "X-Claim-UserId", i.ToString() },
-          { "X-Claim-UserName", userName }
-        }
+      {
+        ["X-Claim-UserName"] = userName
+      }
     });
     var page = await context.NewPageAsync();
     await page.GotoAsync("https://localhost:7175");

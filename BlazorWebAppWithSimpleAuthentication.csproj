@@ -13,4 +13,8 @@
     <None Remove="Tests\**" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="CustomAuthenticationService.cs" />
+  </ItemGroup>
+
 </Project>
