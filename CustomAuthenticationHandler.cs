@@ -43,6 +43,7 @@ public class CustomAuthenticationHandler : IAuthenticationHandler
 
   public Task InitializeAsync(AuthenticationScheme scheme, HttpContext context)
   {
+    Console.WriteLine($"Initializing {scheme.Name} authentication scheme for {context.Request.GetDisplayUrl()}, method {context.Request.Method}.");
     this._httpContext = context;
     return Task.CompletedTask;
   }
