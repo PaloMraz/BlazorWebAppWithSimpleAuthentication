@@ -8,24 +8,38 @@ public class CustomAuthenticationHandler : IAuthenticationHandler
 {
   public const string SchemeName = "CustomAuthenticationScheme";
   private const string UserNameHeaderName = "X-Claim-UserName";
+  private const string CookieName = "CustomAuthCookie";
 
+  private static long _s_counter;
   private HttpContext? _httpContext;
 
   public CustomAuthenticationHandler()
   {
+    Console.WriteLine($"CustomAuthenticationHandler #{Interlocked.Increment(ref _s_counter)} created.");
   }
 
+
   public Task<AuthenticateResult> AuthenticateAsync()
-  {   
+  {
     if (this._httpContext is null)
     {
       return Task.FromResult(AuthenticateResult.Fail("No HttpContext"));
     }
-    if (!this._httpContext.Request.Headers.TryGetValue(UserNameHeaderName, out var userName) || (userName.Count == 0))
+
+    if (this._httpContext.Request.Cookies.TryGetValue(CookieName, out var userNameFromCookie))
     {
-      return Task.FromResult(AuthenticateResult.Fail("No user name found in the request headers."));
+      Console.WriteLine($"==================> User name from COOKIE: {userNameFromCookie}");
+      return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(CreateClaimsPrincipal(userNameFromCookie), SchemeName)));
     }
-    return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(CreateClaimsPrincipal(userName.ToString()), SchemeName)));
+
+    if (!this._httpContext.Request.Headers.TryGetValue(UserNameHeaderName, out var userNameFromHeader) || (userNameFromHeader.Count == 0))
+    {
+      return Task.FromResult(AuthenticateResult.NoResult());
+    }
+
+    Console.WriteLine($"==================> User name from HEADER: {userNameFromHeader}");
+    this._httpContext.Response.Cookies.Append(CookieName, userNameFromHeader.ToString());
+    return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(CreateClaimsPrincipal(userNameFromHeader.ToString()), SchemeName)));
   }
 
 
@@ -47,6 +61,7 @@ public class CustomAuthenticationHandler : IAuthenticationHandler
     this._httpContext = context;
     return Task.CompletedTask;
   }
+
 
   private ClaimsPrincipal CreateClaimsPrincipal(string userName = "DEFAULT")
   {

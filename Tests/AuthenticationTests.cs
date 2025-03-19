@@ -25,7 +25,13 @@ public class AuthenticationTests
   public async Task VerifyEndToEndInteraction()
   {
     string hostProcessExePath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, @"..\..\..\..\bin\publish\BlazorWebAppWithSimpleAuthentication.exe"));
-    using var hostProcess = Process.Start(hostProcessExePath, "--urls https://localhost:7175");
+    ProcessStartInfo hostProcessStartInfo = new(hostProcessExePath)
+    {
+      Arguments = "--urls https://localhost:7175",
+      UseShellExecute = false,
+      WindowStyle = ProcessWindowStyle.Normal
+    };
+    using Process hostProcess = Process.Start(hostProcessStartInfo)!;
 
     using var playwright = await Playwright.CreateAsync();
     await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
@@ -43,7 +49,18 @@ public class AuthenticationTests
     });
 
     var page = await context.NewPageAsync();
-    await page.GotoAsync("https://localhost:7175/");
+
+    page.WebSocket += (_, ws) =>
+    {
+      Debug.WriteLine("======> WebSocket opened: " + ws.Url);
+      ws.FrameSent += (_, f) => Debug.WriteLine($"======> FrameSent: {f.Binary?.Length} byte(s)");
+      ws.FrameReceived += (_, f) => Debug.WriteLine($"======> FrameReceived: {f.Binary?.Length} byte(s)");
+      ws.SocketError += (_, e) => Debug.WriteLine(e);
+      ws.Close += (_, ws1) => Debug.WriteLine("======> WebSocket closed");
+    };
+
+    await page.GotoAsync("https://localhost:7175/", new PageGotoOptions() { WaitUntil = WaitUntilState.NetworkIdle });
+
     await page.GetByRole(AriaRole.Link, new() { Name = $"Go to Secure Page for Superuser Role" }).ClickAsync();
     ILocator message = page.GetByText("You are not authorized to view this page.");
     Assert.NotNull(message);
