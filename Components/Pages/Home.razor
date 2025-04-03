@@ -15,3 +15,15 @@
 <p>
   <a href="/secure-for-superuser">Go to Secure Page for Superuser Role</a>
 </p>
+<p>
+  <button @onclick="CollectGarbage">Collect Garbage</button>
+</p>
+
+@code {
+
+  private void CollectGarbage()
+  {
+    GC.Collect();
+    GC.WaitForPendingFinalizers();
+  }
+}
